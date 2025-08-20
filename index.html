@@ -2,45 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Voice Test1</title>
+  <title>Telugu Voice Agent</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+    }
+    textarea {
+      margin-top: 20px;
+      width: 80%;
+      max-width: 500px;
+      padding: 10px;
+    }
+    .round-btn {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+      transition: background 0.3s;
+    }
+    .round-btn:hover {
+      background: #45a049;
+    }
+  </style>
 </head>
 <body>
-  <h2>🎤 Voice Recognition Test</h2>
-  <button id="startBtn">Start Listening</button>
-  <p><b>Heard:</b> <span id="output"></span></p>
+  <button class="round-btn" onclick="startListening()">Start</button>
+  <textarea id="text" rows="4" cols="50" placeholder="Transcript will appear here..."></textarea>
 
   <script>
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let isSpeaking = false;
 
-    if (!SpeechRecognition) {
-      alert("❌ SpeechRecognition API not supported in this browser. Try Chrome on desktop or Chrome (latest) on Android with HTTPS.");
-    } else {
-      const recognition = new SpeechRecognition();
-      recognition.lang = "en-IN"; // You can set to "te-IN" for Telugu
+    function startListening() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Your browser does not support speech recognition');
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = 'te-IN';
       recognition.interimResults = false;
-      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
 
-      const output = document.getElementById("output");
-      const startBtn = document.getElementById("startBtn");
-
-      startBtn.onclick = () => {
-        recognition.start();
-        output.textContent = "Listening...";
-      };
-
-      recognition.onresult = (event) => {
+      recognition.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
-        output.textContent = transcript;
+        document.getElementById('text').value = transcript;
+
+        const reply = await queryGroq(transcript);
+        speakText(reply);
       };
 
       recognition.onerror = (event) => {
-        output.textContent = "Error: " + event.error;
-        
+        console.log("Recognition error:", event.error);
+        restartListening();
       };
 
       recognition.onend = () => {
-        console.log("Recognition ended");
+        if (!isSpeaking) {
+          restartListening();
+        }
       };
+
+      recognition.start();
+    }
+
+    function restartListening() {
+      if (!isSpeaking) {
+        recognition.start();
+      }
+    }
+
+    function speakText(text) {
+      isSpeaking = true;
+      let utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "te-IN";
+      utter.onend = () => {
+        isSpeaking = false;
+        restartListening();
+      };
+      speechSynthesis.speak(utter);
+    }
+
+    async function queryGroq(userInput) {
+      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer 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", // replace with your key
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "llama3-8b-8192",
+          messages: [
+            {
+              role: "system",
+              content: "You are a helpful assistant. The user will always talk in Telugu. Always reply in clear, natural Telugu only. Do not switch to English unless explicitly asked."
+            },
+            {
+              role: "user",
+              content: userInput
+            }
+          ]
+        })
+      });
+
+      const data = await resp.json();
+      return data.choices[0].message.content;
     }
   </script>
 </body>
