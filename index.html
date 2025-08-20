@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice Test1</title>
+</head>
+<body>
+  <h2>🎤 Voice Recognition Test</h2>
+  <button id="startBtn">Start Listening</button>
+  <p><b>Heard:</b> <span id="output"></span></p>
+
+  <script>
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("❌ SpeechRecognition API not supported in this browser. Try Chrome on desktop or Chrome (latest) on Android with HTTPS.");
+    } else {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-IN"; // You can set to "te-IN" for Telugu
+      recognition.interimResults = false;
+      recognition.continuous = false;
+
+      const output = document.getElementById("output");
+      const startBtn = document.getElementById("startBtn");
+
+      startBtn.onclick = () => {
+        recognition.start();
+        output.textContent = "Listening...";
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        output.textContent = transcript;
+      };
+
+      recognition.onerror = (event) => {
+        output.textContent = "Error: " + event.error;
+        
+      };
+
+      recognition.onend = () => {
+        console.log("Recognition ended");
+      };
+    }
+  </script>
+</body>
+</html>
