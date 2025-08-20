@@ -44,54 +44,63 @@
     let recognition;
     let isSpeaking = false;
 
-    function startListening() {
+    function initRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert('Your browser does not support speech recognition');
-        return;
+        return null;
       }
 
-      recognition = new SpeechRecognition();
-      recognition.lang = 'te-IN';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+      const rec = new SpeechRecognition();
+      rec.lang = 'te-IN';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
 
-      recognition.onresult = async (event) => {
+      rec.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
         document.getElementById('text').value = transcript;
+
+        // stop listening before speaking
+        rec.stop();
 
         const reply = await queryGroq(transcript);
         speakText(reply);
       };
 
-      recognition.onerror = (event) => {
+      rec.onerror = (event) => {
         console.log("Recognition error:", event.error);
-        restartListening();
       };
 
-      recognition.onend = () => {
+      rec.onend = () => {
         if (!isSpeaking) {
-          restartListening();
+          // restart listening after natural stop
+          setTimeout(() => rec.start(), 500);
         }
       };
 
-      recognition.start();
+      return rec;
     }
 
-    function restartListening() {
-      if (!isSpeaking) {
-        recognition.start();
+    function startListening() {
+      if (!recognition) {
+        recognition = initRecognition();
       }
+      recognition.start();
     }
 
     function speakText(text) {
       isSpeaking = true;
       let utter = new SpeechSynthesisUtterance(text);
       utter.lang = "te-IN";
+
       utter.onend = () => {
         isSpeaking = false;
-        restartListening();
+        // add small delay before resuming listening
+        setTimeout(() => {
+          if (recognition) recognition.start();
+        }, 800);
       };
+
       speechSynthesis.speak(utter);
     }
 
