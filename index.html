@@ -61,10 +61,12 @@
         document.getElementById('text').value = transcript;
 
         // stop listening before speaking
-        rec.stop();
-
-        const reply = await queryGroq(transcript);
-        speakText(reply);
+        //rec.stop();
+        if(!isSpeaking){
+            const reply = await queryGroq(transcript);
+            speakText(reply);
+        }
+        
       };
 
       rec.onerror = (event) => {
@@ -105,10 +107,11 @@
     }
 
     async function queryGroq(userInput) {
+   
       const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer", // replace with your key
+          "Authorization": "Bearer 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", // replace with your key
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -132,4 +135,3 @@
   </script>
 </body>
 </html>
-
